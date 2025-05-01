@@ -1,5 +1,3 @@
-pip install bertopic umap-learn hdbscan
-
 # Import delle librerie
 import pandas as pd
 import torch
