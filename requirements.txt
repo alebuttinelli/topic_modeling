@@ -1,0 +1,10 @@
+pandas
+torch
+transformers
+bertopic
+scikit-learn
+numpy
+umap-learn
+hdbscan
+tqdm
+safetensors
