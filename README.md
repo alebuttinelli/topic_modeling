@@ -65,7 +65,6 @@ First, run `train_bertopic.py`. You must provide an input file (`-i`) and a dire
 python train_bertopic.py \
     --input ./data/my_legal_texts.csv \
     --output_dir ./runs/run_01_legal_model
-    ```
 
 ### Step 2: Visualise the Results
 Next, run visualize_bertopic.py. Point it to the run directory you just created (-r) and specify an output directory for your plots (-o).
@@ -74,7 +73,6 @@ Next, run visualize_bertopic.py. Point it to the run directory you just created 
 python visualize_bertopic.py \
     --run_dir ./runs/run_01_legal_model \
     --output_dir ./visuals/run_01_plots
-    ```
 
 This creates a new folder ./visuals/run_01_plots containing interactive HTML files like visualize_topics.html and visualize_documents.html.
 
@@ -86,7 +84,6 @@ python analyze_uncertainty.py \
     --run_dir ./runs/run_01_legal_model \
     --output_file ./analysis/run_01_uncertainty.csv \
     --threshold 0.5
-    ```
 
 This creates the file ./analysis/run_01_uncertainty.csv, which lists all documents that the model was "unsure" about, sorted by how uncertain they are. You can change the --threshold (default is 0.5).
 
