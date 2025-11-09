@@ -1,10 +1,13 @@
-pandas
 torch
 transformers
+safetensors
 bertopic
-scikit-learn
-numpy
 umap-learn
 hdbscan
+pandas
+numpy
+scipy
+scikit-learn
+plotly
 tqdm
-safetensors
+pyarrow
