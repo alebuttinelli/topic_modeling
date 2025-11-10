@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Script per l'analisi dell'incertezza del modello BERTopic.
+Script for uncertainty analysis of the BERTopic model.
+Loads the probability matrix and metadata from a training 'run', 
+identifies the documents with high uncertainty (low maximum probability or high entropy) and saves a CSV with these documents and their scores.
 
-Carica la matrice delle probabilità e i metadati da una 'run' di training,
-identifica i documenti con un'alta incertezza (bassa probabilità massima
-o alta entropia) e salva un CSV con questi documenti e i loro punteggi.
-
-Esempio di esecuzione:
+Example run:
     python analyze_uncertainty.py -r ./modelli_addestrati \
                                   -o ./analisi/documenti_incerti.csv \
                                   -t 0.4
@@ -19,60 +17,55 @@ import os
 import logging
 from scipy.stats import entropy
 
-# --- Configurazione del Logging ---
+# Logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main(run_dir: str, output_file: str, threshold: float):
     """
-    Funzione principale per analizzare l'incertezza.
+    Main function for analysing uncertainty
     """
     
-    # 1. Definisci i percorsi degli artefatti
+    ## Define paths
     probs_path = os.path.join(run_dir, "probabilities.npy")
-    metadata_path = os.path.join(run_dir, "metadata.parquet") # Assumiamo che 'oggetto' sia qui
+    metadata_path = os.path.join(run_dir, "metadata.parquet")
 
-    # 2. Carica gli artefatti necessari
-    logging.info("Caricamento artefatti...")
+    ## Load
+    logging.info("Loadings")
     try:
         probs = np.load(probs_path)
         meta_df = pd.read_parquet(metadata_path)
     except FileNotFoundError as e:
-        logging.error(f"Errore: File non trovato. {e}")
-        logging.error(f"Assicurati che '{run_dir}' contenga 'probabilities.npy' e 'metadata.parquet'.")
+        logging.error(f"Error: File not found. {e}")
         return
     
-    logging.info(f"Caricati {probs.shape[0]} probabilità e {len(meta_df)} record di metadati.")
+    ## Identify uncertain documents
     
-    # 3. Identifica i documenti incerti (basato sul tuo codice)
-    # (Ho rimosso il codice duplicato)
-    
-    # Creazione df con distribuzione di probabilità per ogni documento
+    # Creat df with probability distribution for every document
     df_probs = pd.DataFrame(probs)
 
-    # Individuazione dei documenti al di sotto della soglia di incertezza
+    # Find the documents under the uncertain treshold
     uncertain_mask = df_probs.max(axis=1) < threshold
     uncertain_doc_indices = df_probs[uncertain_mask].index
     
-    logging.info(f"Trovati {len(uncertain_doc_indices)} documenti sotto la soglia di {threshold}.")
+    logging.info(f"Found {len(uncertain_doc_indices)} documents under the treshold of {threshold}.")
 
     if len(uncertain_doc_indices) == 0:
-        logging.warning("Nessun documento incerto trovato con questa soglia. Lo script termina.")
+        logging.warning("No document under the uncertain treshold.")
         return
 
-    # 4. Calcola l'entropia (maggiore entropia = maggiore incertezza)
-    # Seleziona solo le righe delle probabilità per i documenti incerti
+    ## Calculate entropy as a measure of uncertainty
+    # Select only the uncertain documents
     uncertain_probs_array = probs[uncertain_doc_indices]
 
-    # Calcola l'entropia per ogni riga (trasponi l'array per `entropy`)
+    # Calculate entropy
     uncertainty_scores = entropy(uncertain_probs_array.T)
 
-    # 5. Prepara i DataFrame per l'output
+    ## Output DataFrame preparation
     
-    # Colonne per i topic
+    # Topic columns
     topic_columns = [f"Topic_{i}" for i in range(probs.shape[1])]
 
-    # DataFrame con le informazioni di base
-    # (Usiamo .iloc[] per selezionare i metadati corretti e resettiamo l'indice)
+    # DataFrame definition
     df_uncertain_info = pd.DataFrame({
         "original_index": uncertain_doc_indices,
         "oggetti": meta_df.iloc[uncertain_doc_indices]["oggetto"].values,
@@ -80,34 +73,32 @@ def main(run_dir: str, output_file: str, threshold: float):
         "max_probability": df_probs.iloc[uncertain_doc_indices].max(axis=1).values
     })
 
-    # DataFrame con le probabilità per ogni topic (solo per i doc incerti)
+    # DataFrame with probability distributionco
     df_uncertain_probs = pd.DataFrame(uncertain_probs_array, columns=topic_columns)
 
-    # Unisci i due DataFrame fianco a fianco (ora hanno lo stesso indice 0..N)
     df_final_output = pd.concat([df_uncertain_info, df_uncertain_probs], axis=1)
 
-    # Ordina in modo discendente in base all'incertezza (entropia)
+    # Order based on uncertainty (descending)
     df_final_output = df_final_output.sort_values(by="uncertainty_score (entropy)", ascending=False)
 
-    # 6. Salva il risultato
-    # Assicurati che la directory di output esista
+    ## Save the result
     output_dir = os.path.dirname(output_file)
-    if output_dir: # Controlla se il percorso non è vuoto (se l'utente vuole salvare nella root)
+    if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     
     df_final_output.to_csv(output_file, index=False)
-    logging.info(f"File CSV con l'analisi di incertezza salvato in: {output_file}")
+    logging.info(f"File saved in: {output_file}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Analizza l'incertezza dei documenti in un modello BERTopic.")
+    parser = argparse.ArgumentParser(description="Analyse the uncertainty of topic attribution of a BERTopic model.")
     
     parser.add_argument(
         "-r", 
         "--run_dir", 
         type=str, 
         required=True, 
-        help="Directory di input che contiene 'probabilities.npy' e 'metadata.parquet'."
+        help="Input directory with 'probabilities.npy' and 'metadata.parquet'."
     )
     
     parser.add_argument(
@@ -115,7 +106,7 @@ if __name__ == "__main__":
         "--output_file", 
         type=str, 
         required=True, 
-        help="Percorso file .csv dove salvare l'analisi di incertezza."
+        help=".csv file path to save the analysis."
     )
     
     parser.add_argument(
@@ -123,7 +114,7 @@ if __name__ == "__main__":
         "--threshold", 
         type=float, 
         default=0.5,
-        help="Soglia di probabilità massima per considerare un documento 'incerto'. (Default: 0.5)"
+        help="Uncertainty treshold"
     )
     
     args = parser.parse_args()
